@@ -39,6 +39,7 @@ class StarBasis(object):
     def __init__(self, libname='ckc14_deimos.h5', verbose=False,
                  n_neighbors=0, log_interp=True, logify_Z=False,
                  use_params=None, rescale_libparams=False, in_memory=True,
+                 norm_spec = False,
                  **kwargs):
         """An object which holds the stellar spectral library, performs
         interpolations of that library, and has methods to return attenuated,
@@ -91,6 +92,7 @@ class StarBasis(object):
         self._libname = libname
         self.n_neighbors = n_neighbors
         self._rescale = rescale_libparams
+        self.norm_spec = norm_spec
 
         # Load the library
         self.load_lib(libname)
@@ -130,7 +132,13 @@ class StarBasis(object):
         self._libparams = np.array(f['parameters'])
 
         if self._in_memory:
-            self._spectra = np.array(f['spectra'])
+
+            if not self.norm_spec:
+                self._spectra = np.array(f['spectra'])
+
+            elif self.norm_spec:
+                self._spectra = np.array(f['spectra']) / np.array(f['continuua'])
+
             f.close()
             # Filter library so that only existing spectra are included
             maxf = np.max(self._spectra, axis=1)
@@ -138,7 +146,11 @@ class StarBasis(object):
             self._libparams = self._libparams[good]
             self._spectra = self._spectra[good, :]
         else:
-            self._spectra = f['spectra']
+
+            if not self.norm_spec:
+                self._spectra = f['spectra']
+            elif self.norm_spec:
+                self._spectra = f['spectra'] / f['continuua']
 
         if self.logify_Z:
             from numpy.lib import recfunctions as rfn
